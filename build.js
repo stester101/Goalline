@@ -1,0 +1,1 @@
+import{mkdirSync,copyFileSync}from'node:fs';mkdirSync('dist',{recursive:true});for(const f of ['index.html','style.css','app.js','core.js','sw.js','icon.svg','manifest.webmanifest'])copyFileSync(f,`dist/${f}`);
