@@ -1,0 +1,39 @@
+name: Build Android APK
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['README.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Bundle app
+        run: |
+          node build.js
+          mkdir -p android/app/src/main/assets/www
+          cp dist/* android/app/src/main/assets/www/
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/src/main/assets/www/app.js')
+          s=p.read_text().replace("case'export':{", "case'export':{if(window.GoallineAndroid){window.GoallineAndroid.exportBets(JSON.stringify({version:1,bets},null,2));break;}")
+          s=s.replace("if('serviceWorker'in navigator&&location.protocol==='https:')", "if(!window.GoallineAndroid&&'serviceWorker'in navigator&&location.protocol==='https:')")
+          p.write_text(s)
+          PY
+      - name: Build signed installable APK
+        working-directory: android
+        run: gradle --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Goalline-1.0.0-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
